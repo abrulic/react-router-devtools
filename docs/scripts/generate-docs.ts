@@ -71,13 +71,23 @@ function hasLocalRef(ref: string) {
 
 function refHasPath(ref: string, pathFromRepoRoot: string): boolean {
   try {
-    const out = run(`git ls-tree -r --name-only ${ref} -- "${pathFromRepoRoot}"`);
-    return out.trim().length > 0;
+    const dir = pathFromRepoRoot.endsWith("/") ? pathFromRepoRoot : `${pathFromRepoRoot}/`;
+
+    // recursive: any file under the directory?
+    const out = run(`git ls-tree -r --name-only ${ref} -- "${dir}"`, {
+      cwd: currentDocsWorkspace,
+    });
+    if (out.trim().length > 0) return true;
+
+    // non-recursive: does the directory itself appear as a tree entry?
+    const top = run(`git ls-tree --name-only ${ref} -- "${dir}"`, {
+      cwd: currentDocsWorkspace,
+    });
+    return top.trim().length > 0;
   } catch {
     return false;
   }
 }
-
 function buildDocs(sourceDir: string, outDir: string) {
   if (!existsSync(sourceDir)) throw new Error(`Docs workspace not found: ${sourceDir}`);
 
