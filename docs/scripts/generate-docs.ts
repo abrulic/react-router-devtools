@@ -231,16 +231,6 @@ function isPullRequestCI() {
 run(`git fetch --prune origin ${defaultBranch}`, { cwd: currentDocsWorkspace, inherit: true });
 
 const hasOnDefault = refHasPath(`origin/${defaultBranch}`, checkPath);  console.log({ defaultBranch, checkPath, hasOnDefault });
-
-const root = run("git rev-parse --show-toplevel", { cwd: currentDocsWorkspace });
-
-run(`git -C "${root}" ls-tree -r --name-only --full-tree origin/${defaultBranch} | grep -E '^docs/' | sed -n '1,200p'`, {
-  inherit: true,
-});
-
-run(`git -C "${root}" ls-tree -r --name-only --full-tree origin/${defaultBranch} -- "docs/content/" | sed -n '1,200p'`, {
-  inherit: true,
-});
 if (!hasOnDefault) {
         throw new Error(`Default branch 'origin/${defaultBranch}' has no '${checkPath}'. Pass --versions to build tags.`);
       }
