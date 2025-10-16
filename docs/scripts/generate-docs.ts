@@ -69,25 +69,32 @@ function hasLocalRef(ref: string) {
   try { run(`git show-ref --verify --quiet ${ref}`); return true; } catch { return false; }
 }
 
+function repoRoot(): string {
+  // absolute path to repo top-level
+  return run("git rev-parse --show-toplevel", { cwd: currentDocsWorkspace });
+}
+
 function refHasPath(ref: string, pathFromRepoRoot: string): boolean {
   try {
-    const dir = pathFromRepoRoot.endsWith("/") ? pathFromRepoRoot : `${pathFromRepoRoot}/`;
+    const root = repoRoot();
+    const dir = pathFromRepoRoot.replace(/^\/+/, "").replace(/\/?$/, "/");
 
-    // recursive: any file under the directory?
-    const out = run(`git ls-tree -r --name-only ${ref} -- "${dir}"`, {
-      cwd: currentDocsWorkspace,
-    });
+    // Recursive: any file under the dir?
+    const out = run(
+      `git -C "${root}" ls-tree -r --name-only --full-tree ${ref} -- "${dir}"`
+    );
     if (out.trim().length > 0) return true;
 
-    // non-recursive: does the directory itself appear as a tree entry?
-    const top = run(`git ls-tree --name-only ${ref} -- "${dir}"`, {
-      cwd: currentDocsWorkspace,
-    });
+    // Non-recursive: does the dir itself exist as a tree entry?
+    const top = run(
+      `git -C "${root}" ls-tree --name-only --full-tree ${ref} -- "${dir}"`
+    );
     return top.trim().length > 0;
   } catch {
     return false;
   }
 }
+
 function buildDocs(sourceDir: string, outDir: string) {
   if (!existsSync(sourceDir)) throw new Error(`Docs workspace not found: ${sourceDir}`);
 
@@ -220,11 +227,21 @@ function isPullRequestCI() {
       builtVersions = [...tags];
     } else {
       // Fallback: build default branch (useful if you want a "main" channel)
-      const checkPath = repoPath(docsRelative, contentDir); // e.g. "docs/content"
-      run(`git fetch --prune origin ${defaultBranch}`, { cwd: currentDocsWorkspace, inherit: true });
-      const hasOnDefault = refHasPath(`origin/${defaultBranch}`, checkPath);
-  console.log({ defaultBranch, checkPath, hasOnDefault });
-      if (!hasOnDefault) {
+    const checkPath = repoPath(docsRelative, contentDir); // "docs/content"
+run(`git fetch --prune origin ${defaultBranch}`, { cwd: currentDocsWorkspace, inherit: true });
+
+const hasOnDefault = refHasPath(`origin/${defaultBranch}`, checkPath);  console.log({ defaultBranch, checkPath, hasOnDefault });
+
+const root = run("git rev-parse --show-toplevel", { cwd: currentDocsWorkspace });
+
+run(`git -C "${root}" ls-tree -r --name-only --full-tree origin/${defaultBranch} | grep -E '^docs/' | sed -n '1,200p'`, {
+  inherit: true,
+});
+
+run(`git -C "${root}" ls-tree -r --name-only --full-tree origin/${defaultBranch} -- "docs/content/" | sed -n '1,200p'`, {
+  inherit: true,
+});
+if (!hasOnDefault) {
         throw new Error(`Default branch 'origin/${defaultBranch}' has no '${checkPath}'. Pass --versions to build tags.`);
       }
       console.log(chalk.cyan(`(ci) Building docs from '${defaultBranch}' → ${defaultBranch}`));
