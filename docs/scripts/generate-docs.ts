@@ -214,7 +214,7 @@ function isPullRequestCI() {
       const checkPath = repoPath(docsRelative, contentDir); // e.g. "docs/content"
       run(`git fetch --prune origin ${defaultBranch}`, { cwd: currentDocsWorkspace, inherit: true });
       const hasOnDefault = refHasPath(`origin/${defaultBranch}`, checkPath);
-
+  console.log({ defaultBranch, checkPath, hasOnDefault });
       if (!hasOnDefault) {
         throw new Error(`Default branch 'origin/${defaultBranch}' has no '${checkPath}'. Pass --versions to build tags.`);
       }
