@@ -1,7 +1,7 @@
 import { type ExecSyncOptions, execSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { join, resolve, posix as pathPosix } from "node:path";
+import path, { join, resolve, posix as pathPosix } from "node:path";
 import { parseArgs } from "node:util";
 import chalk from "chalk";
 import semver from "semver";
@@ -40,9 +40,8 @@ try {
   docsRelative = "";
 }
 
-const repoPath = (...segs: string[]) =>
-  pathPosix.join(...segs.filter(Boolean).map(s => s.replace(/^\/+|\/+$/g, "")));
-
+export const repoPath = (...segs: string[]) =>
+  path.normalize(path.join(...segs.filter(Boolean)));
 
 const allTags = () => run("git tag --list").split("\n").filter(Boolean);
 
